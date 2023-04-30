@@ -1,6 +1,5 @@
 from auto_accompany.song_convert import convert_to_midi
 import os
-import pytest
 
 # test convert_to_midi
 
