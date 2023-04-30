@@ -1,1 +1,0 @@
-python .\auto_accompany\pitch_detect\model.py 
