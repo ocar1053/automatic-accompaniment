@@ -22,6 +22,7 @@ def convert_to_midi(file_path=file_path_vocal, dir_path=dir_path):
     model_output, midi_data, note_events = predict(file_path)
 
     midi_data.write(midi_path)
+    return model_output
 
 
 if __name__ == '__main__':
