@@ -7,7 +7,7 @@ dir_path = os.path.dirname(os.path.abspath(__file__))
 file_path_vocal = os.path.join(dir_path, 'audio\\vocal', 'output.wav')
 
 
-def record_song(file_path=file_path_vocal):
+def record_song(file_path=file_path_vocal) -> None:
     """
     Records a song and saves it as a .wav file.
     :param file_path: the path to save the .wav file

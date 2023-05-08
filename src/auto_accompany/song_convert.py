@@ -9,7 +9,7 @@ file_path_vocal = os.path.join(dir_path, 'audio\\vocal',
 # convert mp3 or wav to midi
 
 
-def convert_to_midi(file_path=file_path_vocal, dir_path=dir_path):
+def convert_to_midi(file_path=file_path_vocal, dir_path=dir_path) -> list:
     """
     Converts a .mp3 or .wav file to a .midi file.
     :param file_path: the path to the .mp3 or .wav file

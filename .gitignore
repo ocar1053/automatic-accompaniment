@@ -5,5 +5,7 @@ src/auto_accompany.egg-info
 .pytest_cache/
 .mypy_cache/
 .tox/
+src/data_process/POP909/
+.vscode/
 ```
 
