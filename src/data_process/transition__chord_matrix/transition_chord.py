@@ -9,6 +9,7 @@ relative_path = os.path.dirname(os.path.realpath(__file__))
 def get_chord_file(relative_path) -> list:
     """
     get the chord file path list
+
     :param relative: the relative path
     :return: chord_file_list
     """
@@ -73,7 +74,19 @@ def merge_all_df(file_list) -> pd.DataFrame:
 
         all_df = pd.concat([all_df, chord_df])
 
-    all_df.to_csv('all_chord.csv', index=True, header=True)
+    # filter chords apeared less than 10 times
+    chord_count = all_df['chord'].value_counts()
+    chord_count = chord_count[chord_count <= 30]
+
+    # get chord name
+    chord_name = chord_count.index.to_list()
+
+    # filter chord
+    all_df = all_df[~all_df['chord'].isin(chord_name)]
+    all_df = all_df.reset_index(drop=True)
+
+    file_path = os.path.join(relative_path, 'csv_file\\all_chord.csv')
+    all_df.to_csv(file_path, index=True, header=True)
     return all_df
 
 
@@ -106,7 +119,8 @@ def get_transition_chord_normalize_each_time(all_df) -> pd.DataFrame:
     transitions = transitions.applymap(lambda x: '{:.2%}'.format(x))
 
     # save as csv
-    transitions.to_csv('transition_chord_normalize_each_time.csv', index=True, header=True)
+    file_path = os.path.join(relative_path, 'csv_file\\transition_chord_normalize_each_time.csv')
+    transitions.to_csv(file_path, index=True, header=True)
 
     return transitions
 
@@ -134,8 +148,9 @@ def get_transition_chord(all_df) -> pd.DataFrame:
 
     transitions = transitions.applymap(lambda x: '{:.2%}'.format(x))
 
+    file_path = os.path.join(relative_path, 'csv_file\\transition_chord.csv')
     # save as csv
-    transitions.to_csv('transition_chord.csv', index=True, header=True)
+    transitions.to_csv(file_path, index=True, header=True)
     return transitions
 
 
