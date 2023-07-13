@@ -5,7 +5,7 @@ from basic_pitch.inference import predict
 # generate relative path
 dir_path = os.path.dirname(os.path.abspath(__file__))
 file_path_vocal = os.path.join(dir_path, 'audio\\vocal',
-                               'ai_hugugi.wav')
+                               'input.9.mp3')
 # convert mp3 or wav to midi
 
 
@@ -17,7 +17,7 @@ def convert_to_midi(file_path=file_path_vocal, dir_path=dir_path) -> list:
     :return: None
     """
     # convert to midi
-    midi_path = os.path.join(dir_path, 'midi', 'midi_output.mid')
+    midi_path = os.path.join(dir_path, 'midi', 'midi_output_voice.mid')
 
     model_output, midi_data, note_events = predict(file_path)
     midi_data.write(midi_path)
