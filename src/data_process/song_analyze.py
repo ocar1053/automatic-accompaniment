@@ -17,7 +17,8 @@ def midi_note_to_pitch(midi_note: int) -> str:
     """
 
     # Equal temperament
-    pitch_names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+    pitch_names = ['C', 'C#', 'D', 'D#', 'E',
+                   'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
     pitch_class = midi_note % 12
     pitch_name = pitch_names[pitch_class]
     return f'{pitch_name}'
@@ -172,7 +173,8 @@ def get_scale_tones_enharmonic_equivalent(midi_file: str) -> list:
     # Get the enharmonic equivalent, if yes append to the list
     for i in range(len(adjust_key_tonic_name)):
         if adjust_key_tonic_name[i] in enharmonic_equivalent:
-            adjust_key_tonic_name.append(enharmonic_equivalent[adjust_key_tonic_name[i]])
+            adjust_key_tonic_name.append(
+                enharmonic_equivalent[adjust_key_tonic_name[i]])
 
     return adjust_key_tonic_name
 

@@ -1,9 +1,9 @@
 from hmmlearn import hmm
 import numpy as np
-from hmm_model_generate import hmm_pipeline
+from data_process.hmm_model_generate import hmm_pipeline
 from music21 import *
 from midi2audio import FluidSynth
-from song_analyze import get_each_chord_componetns
+from data_process.song_analyze import get_each_chord_componetns
 from pydub import AudioSegment
 
 
@@ -47,8 +47,10 @@ class ChordGenerator:
 
         # given the observation, predict the state
 
-        user_sing_action = np.array([[i for i in range(len(observations_variable))]])
-        logprob, chord_sequence = self.model.decode(user_sing_action.transpose(), algorithm="viterbi")
+        user_sing_action = np.array(
+            [[i for i in range(len(observations_variable))]])
+        logprob, chord_sequence = self.model.decode(
+            user_sing_action.transpose(), algorithm="viterbi")
 
         print("logprob", logprob)
         print("chord_sequence", chord_sequence)
@@ -147,7 +149,8 @@ class PianoAccompanimentMode1(Accompaniment):
             # right hand
             for i in range(4):
 
-                right_notes = chord.Chord([root_note_str+'4', third_note_str+'4', fifth_note_str+'4'])
+                right_notes = chord.Chord(
+                    [root_note_str+'4', third_note_str+'4', fifth_note_str+'4'])
                 right_notes.duration.type = 'quarter'
 
                 self.right_hand.append(right_notes)
@@ -160,12 +163,55 @@ class PianoAccompanimentMode1(Accompaniment):
 
 
 class PianoAccompanimentMode2(Accompaniment):
-    def __init__(self):
-        super().__init__('piano', 'mode2')
+    def __init__(self, bpm, chord_sequence):
+        """
+        Constructs all the necessary attributes for the piano accompaniment in mode 1 object.
 
-    def generate(self, chords):
-        # 用特定于钢琴和模式2的方式生成伴奏
-        pass
+        Args:
+            bpm (float): The beats per minute of the accompaniment.
+            chord_sequence (list): The chord sequence for the accompaniment.
+        """
+
+        super().__init__(bpm, chord_sequence)
+
+        self.left_hand = stream.Part()
+        self.right_hand = stream.Part()
+        self.left_hand.insert(0, instrument.Piano())
+        self.right_hand.insert(0, instrument.Piano())
+        self.chord_sequence = get_each_chord_componetns(chord_sequence)
+
+    def generate(self):
+
+        for chord_notes in self.chord_sequence:
+            root_note_str = chord_notes[0]
+            third_note_str = chord_notes[1]
+            fifth_note_str = chord_notes[2]
+
+            # left hand
+
+            root_note = note.Note(root_note_str+'3')
+            root_note.duration.type = 'whole'
+
+            self.left_hand.append(root_note)
+
+            # right hand
+            for i in range(4):
+                if i % 2 == 0:
+                    right_notes = chord.Chord(
+                        [third_note_str+'4', fifth_note_str+'4'])
+                    right_notes.duration.type = 'quarter'
+                    self.right_hand.append(right_notes)
+                else:
+                    r_note = note.Note(root_note_str+'4')
+                    r_note.duration.type = 'quarter'
+
+                    self.right_hand.append(r_note)
+
+        self.main_stream.insert(0, self.left_hand)
+        self.main_stream.insert(0, self.right_hand)
+        self.main_stream.insert(0, tempo.MetronomeMark(int(self.bpm)))
+
+        return self.main_stream
 
 
 class DrumAccompanimentMode1(Accompaniment):
@@ -203,10 +249,10 @@ class DrumAccompanimentMode1(Accompaniment):
             main_stream (stream.Stream): The music21 stream object for the drum accompaniment in mode 1.
         """
         pattern = [
-            (36, 36),  # Bass Drum + Closed Hi-hat
-            (38, 42),  # Snare Drum + Closed Hi-hat
-            (36, 36),  # Bass Drum + Closed Hi-hat
-            (38, 42)   # Snare Drum + Closed Hi-hat
+            (36, ),
+            (38, ),
+            (36,),
+            (38,)
         ]
 
         # Create the drum track
@@ -215,7 +261,7 @@ class DrumAccompanimentMode1(Accompaniment):
                 for midi_pitch in p:
                     n = note.Note()
                     n.pitch.midi = midi_pitch
-                    n.duration = duration.Duration(1/2)
+                    n.duration = duration.Duration(1)
                     self.main_stream.append(n)
         self.main_stream.insert(0, tempo.MetronomeMark(int(self.bpm)))
         return self.main_stream
@@ -326,10 +372,11 @@ class Mixer:
 
         """
 
-        self.voice = AudioSegment.from_mp3(vocal_file)[vocal_start_time_in_ms * 1000:]
+        self.voice = AudioSegment.from_mp3(
+            vocal_file)[vocal_start_time_in_ms * 1000:]
         self.piano = AudioSegment.from_wav(piano_file)
         self.drum = AudioSegment.from_wav(drum_file)
-        self.min_length = min(len(self.voice), len(self.piano))
+        self.min_length = min(len(self.voice), len(self.piano), len(self.drum))
 
         self.voice = self.voice[:self.min_length]
         self.piano = self.piano[:self.min_length]
@@ -385,27 +432,29 @@ class Mixer:
 
         # export the file
 
-        mixed.export("C:\\Users\\Hsieh\\Documents\\nccucs\\specialTopic\\special_topic\\src\\data_process\\accompaniment_file\\combined\\combined.wav", format="wav")
+        mixed.export(
+            "C:\\Users\\Hsieh\\Documents\\nccucs\\specialTopic\\special_topic\\src\\api\\uploaded_files\\combined.wav", format="wav")
 
         return None
 
 
-if __name__ == '__main__':
-
+def generate_music(vocal_file, vocal_midi_file):
     # file adress
 
-    midi_piano_file = 'C:\\Users\\Hsieh\\Documents\\nccucs\\specialTopic\\special_topic\\src\\data_process\\accompaniment_file\\midi\\piano.mid'
-    midi_drum_file = 'C:\\Users\\Hsieh\\Documents\\nccucs\\specialTopic\\special_topic\\src\\data_process\\accompaniment_file\\midi\\drum.mid'
-    wav_piano_file = 'C:\\Users\\Hsieh\\Documents\\nccucs\\specialTopic\\special_topic\\src\\data_process\\accompaniment_file\\wav\\piano.wav'
-    wav_drum_file = 'C:\\Users\\Hsieh\\Documents\\nccucs\\specialTopic\\special_topic\\src\\data_process\\accompaniment_file\\wav\\drum.wav'
-    model, vocal_tempo, the_start_time, chord_list, split_notes_list = hmm_pipeline()
+    midi_piano_file = 'C:\\Users\\Hsieh\\Documents\\nccucs\\specialTopic\\special_topic\\src\\api\\midi\\piano.mid'
+    midi_drum_file = 'C:\\Users\\Hsieh\\Documents\\nccucs\\specialTopic\\special_topic\\src\\api\\midi\\drum.mid'
+    wav_piano_file = "C:\\Users\\Hsieh\\Documents\\nccucs\\specialTopic\\special_topic\\src\\api\\wav\\piano.wav"
+    wav_drum_file = "C:\\Users\\Hsieh\\Documents\\nccucs\\specialTopic\\special_topic\\src\\api\\wav\\drum.wav"
+    model, vocal_tempo, the_start_time, chord_list, split_notes_list = hmm_pipeline(
+        vocal_file, vocal_midi_file)
 
     # generate the chord sequence
     my_chord_generator = ChordGenerator(model, split_notes_list, chord_list)
     chord_sequence = my_chord_generator.generate()
 
     # generate the piano accompaniment
-    my_piano_accompaniment = PianoAccompanimentMode1(vocal_tempo, chord_sequence)
+    my_piano_accompaniment = PianoAccompanimentMode1(
+        vocal_tempo, chord_sequence)
     piano_accompaniment = my_piano_accompaniment.generate()
 
     # generate the drum accompaniment
@@ -421,7 +470,7 @@ if __name__ == '__main__':
 
     # convert the MIDI file to WAV file
     piano_wav_file = WAVFile(
-        'C:\\Users\\Hsieh\\Documents\\nccucs\\specialTopic\\special_topic\\src\\data_process\\soundfont\\yamahac7.sf2', midi_piano_file, wav_piano_file)
+        'C:\\Users\\Hsieh\\Documents\\nccucs\\specialTopic\\special_topic\\src\\data_process\\soundfont\\Nice-Steinway-v3.9.sf2', midi_piano_file, wav_piano_file)
     piano_wav_file.convert_and_write()
 
     drum_wav_file = WAVFile(
@@ -429,6 +478,6 @@ if __name__ == '__main__':
     drum_wav_file.convert_and_write()
 
     # mix
-    my_mixer = Mixer('C:\\Users\\Hsieh\\Documents\\nccucs\\specialTopic\\special_topic\\src\\auto_accompany\\audio\\vocal\\input.9.mp3',
+    my_mixer = Mixer(vocal_file,
                      wav_piano_file, wav_drum_file, the_start_time)
     my_mixer.mix_vocal_instrumental(my_mixer.mix_instruments())

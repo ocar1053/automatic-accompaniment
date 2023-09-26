@@ -249,10 +249,10 @@ class DrumAccompanimentMode1(Accompaniment):
             main_stream (stream.Stream): The music21 stream object for the drum accompaniment in mode 1.
         """
         pattern = [
-            (36, 36),  # Bass Drum + Closed Hi-hat
-            (38, 42),  # Snare Drum + Closed Hi-hat
-            (36, 36),  # Bass Drum + Closed Hi-hat
-            (38, 42)   # Snare Drum + Closed Hi-hat
+            (36, ),
+            (38, ),
+            (36,),
+            (38,)
         ]
 
         # Create the drum track
@@ -261,7 +261,7 @@ class DrumAccompanimentMode1(Accompaniment):
                 for midi_pitch in p:
                     n = note.Note()
                     n.pitch.midi = midi_pitch
-                    n.duration = duration.Duration(1/2)
+                    n.duration = duration.Duration(1)
                     self.main_stream.append(n)
         self.main_stream.insert(0, tempo.MetronomeMark(int(self.bpm)))
         return self.main_stream

@@ -1,6 +1,6 @@
 import pandas as pd
 from pychord import Chord
-from song_analyze import convert_to_note_name, get_beat_info, get_scale_tones_enharmonic_equivalent, predict_key_of_song, split_midi_to_measure
+from data_process.song_analyze import convert_to_note_name, get_beat_info, get_scale_tones_enharmonic_equivalent, predict_key_of_song, split_midi_to_measure
 from scipy.special import softmax
 from hmmlearn import hmm
 import numpy as np
@@ -47,6 +47,9 @@ def trim_the_chord(chord_list: list, adjust_key_tonic_name: list) -> (list, int)
 
         # if chord's component is not in the scale, add to chord_list
         if c.components() not in adjust_key_tonic_name:
+
+            # # 50 %chance to delete
+            # if np.random.randint(0, 2) == 0:
             chord_list.remove(i)
 
     return chord_list, len(chord_list)
@@ -106,7 +109,8 @@ def caculate_emission_probability(split_notes_list: list, df_pitch: pd.DataFrame
 
     """
 
-    pitch_names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+    pitch_names = ['C', 'C#', 'D', 'D#', 'E',
+                   'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
     # create 12 dim vector for each measure
     measure_list_vector = []
@@ -129,7 +133,8 @@ def caculate_emission_probability(split_notes_list: list, df_pitch: pd.DataFrame
         temp_list = []
 
         for i in range(len(df_pitch)):
-            temp_list.append(np.dot(measure_vector, np.log2(df_pitch.iloc[i, 1:].to_numpy().astype(float))))
+            temp_list.append(np.dot(measure_vector, np.log2(
+                df_pitch.iloc[i, 1:].to_numpy().astype(float))))
         loglikelihood_list.append(temp_list)
 
     return loglikelihood_list
@@ -187,12 +192,15 @@ def generate_transition_matrix(transition__chord_matrix_file: str, chord_list: l
     # preprocess dataframe
     transition_matrix.rename(columns={'Unnamed: 0': 'chord'}, inplace=True)
     # remove the row with chord not in chord_list
-    transition_matrix = transition_matrix[transition_matrix['chord'].isin(chord_list)]
+    transition_matrix = transition_matrix[transition_matrix['chord'].isin(
+        chord_list)]
     # remove the column's name not in chord_list but remain the column "chord"
-    transition_matrix = transition_matrix[transition_matrix.columns.intersection(chord_list)]
+    transition_matrix = transition_matrix[transition_matrix.columns.intersection(
+        chord_list)]
 
     # remove the % in each element
-    transition_matrix = transition_matrix.apply(lambda x: x.str.replace('%', ''))
+    transition_matrix = transition_matrix.apply(
+        lambda x: x.str.replace('%', ''))
 
     # convert to numpy array
     transition_matrix = np.array(transition_matrix)
@@ -208,7 +216,7 @@ def generate_transition_matrix(transition__chord_matrix_file: str, chord_list: l
     return transition_matrix
 
 
-def ensemble_hmm_model(transition_matrix: np.array, emission_matrix: np.array, chord_list: list) -> hmm.CategoricalHMM:
+def ensemble_hmm_model(transition_matrix: np.array, emission_matrix: np.array, chord_list: list, key_signature: str) -> hmm.CategoricalHMM:
     """
     the function to ensemble the hmm model
 
@@ -217,6 +225,7 @@ def ensemble_hmm_model(transition_matrix: np.array, emission_matrix: np.array, c
         emission_matrix (np.array): the emission matrix
         chord_list (list): the trimmed chord list
         measure_list_vector (list): the list of measure vector
+        key_signature (str): the key signature
     Returns:
         the ensembled hmm model
     """
@@ -224,13 +233,31 @@ def ensemble_hmm_model(transition_matrix: np.array, emission_matrix: np.array, c
     states = chord_list
     n_states = len(states)
 
-    # observation that is note vector
-
+    # use softmax to normalize the start probability
     start_probability = np.full(n_states, 1/n_states)
+
+    # observation that is note vector
+    if key_signature in chord_list:
+
+        classic_factor = 1
+        start_probability = np.full(n_states, 0, dtype=float)
+        start_probability[chord_list.index(key_signature)] = classic_factor
+
+        for i in range(len(start_probability)):
+            if start_probability[i] == 0:
+                start_probability[i] = (1-classic_factor)/(n_states-1)
+
+        print("the key signature is in chord list")
+    else:
+        start_probability = np.full(n_states, 1/n_states)
+
+    # normalize  the start probability
+    start_probability = softmax(start_probability)
     transition_probability = transition_matrix
     emission_probability = emission_matrix
 
-    model = hmm.CategoricalHMM(n_components=n_states, verbose=True, n_iter=1000)
+    model = hmm.CategoricalHMM(random_state=0,
+                               n_components=n_states, verbose=True, n_iter=1000)
     model.startprob_ = start_probability
     model.transmat_ = transition_probability
     model.emissionprob_ = emission_probability
@@ -238,7 +265,7 @@ def ensemble_hmm_model(transition_matrix: np.array, emission_matrix: np.array, c
     return model
 
 
-def hmm_pipeline() -> (hmm.CategoricalHMM, float, float, list, list):
+def hmm_pipeline(vocal_file, vocal_midi_file) -> (hmm.CategoricalHMM, float, float, list, list):
     """
     the pipeline to generate the hmm model
 
@@ -254,34 +281,40 @@ def hmm_pipeline() -> (hmm.CategoricalHMM, float, float, list, list):
     melody_observation_matrix_file = 'C:\\Users\\Hsieh\\Documents\\nccucs\\specialTopic\\special_topic\\src\\data_process\\melody observation matrix\\csv_file\\all_pitch.csv'
     original_chord_list = get_the_chord_list(
         'C:\\Users\\Hsieh\\Documents\\nccucs\\specialTopic\\special_topic\\src\\data_process\\transition__chord_matrix\\csv_file\\all_chord.csv')
-    vocal_file = 'C:\\Users\\Hsieh\\Documents\\nccucs\\specialTopic\\special_topic\\src\\auto_accompany\\audio\\vocal\\input.9.mp3'
-    vocal_midi_file = 'C:\\Users\\Hsieh\\Documents\\nccucs\\specialTopic\\special_topic\\src\\auto_accompany\\midi\\midi_output_voice.mid'
 
     # 1. get the vocal tempo, time section, start time
     vocal_tempo, time_section, the_start_time = get_beat_info(vocal_file)
 
+    vocal_tempo = int(vocal_tempo)
     # 2. split the vocal melody to measure
     split_notes_list = split_midi_to_measure(vocal_midi_file, time_section)
 
     # 3. get enharmonic scale
-    enharmonic_scale_tonic_name = get_scale_tones_enharmonic_equivalent(vocal_midi_file)
+    enharmonic_scale_tonic_name = get_scale_tones_enharmonic_equivalent(
+        vocal_midi_file)
 
     # 4. get the trimmed chord list
-    chord_list, chord_len = trim_the_chord(original_chord_list, enharmonic_scale_tonic_name)
+    chord_list, chord_len = trim_the_chord(
+        original_chord_list, enharmonic_scale_tonic_name)
 
     # 5. get the melody observation matrix
-    df_pitch = preprocess_melody_observation_matrix(melody_observation_matrix_file, chord_list)
+    df_pitch = preprocess_melody_observation_matrix(
+        melody_observation_matrix_file, chord_list)
 
     # 6. caculate the emission probability
-    loglikelihood_list = caculate_emission_probability(split_notes_list, df_pitch)
+    loglikelihood_list = caculate_emission_probability(
+        split_notes_list, df_pitch)
 
     # 7. generate the emission matrix
     emission_matrix = generate_emission_matrix(loglikelihood_list)
 
     # 8. generate the transition matrix
-    transition_matrix = generate_transition_matrix(transition__chord_matrix_file, chord_list)
+    transition_matrix = generate_transition_matrix(
+        transition__chord_matrix_file, chord_list)
 
     # 9. ensemble the hmm model
-    model = ensemble_hmm_model(transition_matrix, emission_matrix, chord_list)
+    keysignature = predict_key_of_song(vocal_midi_file)
+    model = ensemble_hmm_model(
+        transition_matrix, emission_matrix, chord_list, keysignature)
 
     return model, vocal_tempo, the_start_time, chord_list, split_notes_list
