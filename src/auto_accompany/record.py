@@ -1,9 +1,9 @@
 import os
 import sounddevice as sd
 from scipy.io.wavfile import write
-
+from . import dir_path
 # generate relative path
-dir_path = os.path.dirname(os.path.abspath(__file__))
+
 file_path_vocal = os.path.join(dir_path, 'audio\\vocal', 'output.wav')
 
 
