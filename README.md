@@ -70,6 +70,9 @@ With the advancement of technology, the music creation process is no longer limi
 <!-- USAGE EXAMPLES -->
 ## Usage
 
+- Upload your music
+  
+![image](https://github.com/ocar1053/automatic-accompaniment/assets/64206644/4624d866-2eb1-497b-bbd7-51aa02b3414c)
 
 
 
