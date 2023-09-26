@@ -75,7 +75,9 @@ With the advancement of technology, the music creation process is no longer limi
 ![image](https://github.com/ocar1053/automatic-accompaniment/assets/64206644/4624d866-2eb1-497b-bbd7-51aa02b3414c)
 
 
-
+- Enjoy your music
+  
+![image](https://github.com/ocar1053/automatic-accompaniment/assets/64206644/308cde0c-4c3a-4547-b052-33d01fbfb2c1)
 
 
 
