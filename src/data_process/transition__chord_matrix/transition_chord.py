@@ -73,6 +73,68 @@ def get_transition_chord_normalize_each_time(all_df) -> pd.DataFrame:
     return transitions
 
 
+def data_preprocess(chord_df) -> pd.DataFrame:
+    """
+    data preprocess to remove empty chord and add start_chord and end_chord
+    :param chord_df: the chord DataFrame
+    :return: chord_df
+    """
+
+    # remove the empty chord
+    chord_df = chord_df[chord_df['chord'] != 'N']
+
+    start_chord = pd.Series(
+        {'start_time': 0, 'end_time': chord_df['start_time'].iloc[0], 'chord': 'start_chord'})
+    end_chord = pd.Series({'start_time': chord_df['end_time'].iloc[-1],
+                          'end_time': chord_df['end_time'].iloc[-1]+1, 'chord': 'end_chord'})
+
+    chord_df = pd.concat([pd.DataFrame(start_chord).T,
+                         chord_df], ignore_index=True)
+
+    chord_df = pd.concat(
+        [chord_df, pd.DataFrame(end_chord).T], ignore_index=True)
+
+    # simplfy the chord by change remove chord after '/' and remove chord after '(')
+    chord_df['chord'] = chord_df['chord'].apply(lambda x: x.split('/')[0])
+    chord_df['chord'] = chord_df['chord'].apply(lambda x: x.split('(')[0])
+    return chord_df
+
+
+def merge_all_df(file_list) -> pd.DataFrame:
+    """
+    merge all chord_df
+    :param file_list: the chord file list
+    :return: all_df
+    """
+
+    all_df = pd.DataFrame()
+
+    for index, file in enumerate(file_list):
+
+        chord_df = pd.read_csv(file, sep='\t', header=None, names=[
+                               'start_time', 'end_time', 'chord'])
+
+        chord_df = data_preprocess(chord_df)
+        chord_df['song_num'] = index
+
+        all_df = pd.concat([all_df, chord_df])
+
+    # filter chords apeared less than 10 times
+    chord_count = all_df['chord'].value_counts()
+    chord_count = chord_count[chord_count <= 30]
+
+    # get chord name
+    chord_name = chord_count.index.to_list()
+
+    # filter chord
+    all_df = all_df[~all_df['chord'].isin(chord_name)]
+    all_df = all_df.reset_index(drop=True)
+
+    file_path = os.path.join(relative_path, 'csv_file\\all_chord.csv')
+    all_df.to_csv(file_path, index=True, header=True)
+    return all_df
+
+
 def get_transition_chord(all_df) -> pd.DataFrame:
     """
     get the transition chord
